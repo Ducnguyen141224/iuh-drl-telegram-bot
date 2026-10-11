@@ -37,6 +37,8 @@ Các lệnh Telegram:
 - `/events`: tối đa 10 hoạt động trong lần lấy dữ liệu gần nhất.
 - `/dangnhap`: mở Chrome để đăng nhập hoặc làm mới phiên IUH.
 
+Nhấn nút **Menu** hoặc nhập dấu `/` trong ô chat để Telegram hiển thị danh sách lệnh trên. Bot tự đăng ký lại menu này mỗi lần khởi động.
+
 Log cục bộ nằm tại `data/local-service.log`, `data/watcher.log` và `data/telegram-bot.log`. Không chạy thêm `npm start` hoặc `npm run bot` riêng khi chế độ local đã bật.
 
 Nếu chỉ muốn chạy chung bằng terminal, dùng `npm run local`. Các hướng dẫn lệnh riêng bên dưới dùng cho kiểm tra hoặc vận hành thủ công.

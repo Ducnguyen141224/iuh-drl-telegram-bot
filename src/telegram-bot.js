@@ -149,11 +149,16 @@ async function main() {
     const bot = await telegram("getMe");
     await telegram("setMyCommands", {
       commands: [
+        { command: "start", description: "Khởi động và xem hướng dẫn nhanh" },
         { command: "status", description: "Kiểm tra trạng thái theo dõi" },
         { command: "events", description: "Xem hoạt động gần nhất" },
         { command: "dangnhap", description: "Mở Chrome đăng nhập lại IUH" },
         { command: "help", description: "Xem hướng dẫn sử dụng" },
       ],
+    });
+    await telegram("setChatMenuButton", {
+      chat_id: config.telegramChatId,
+      menu_button: { type: "commands" },
     });
     let { offset } = await readJson(offsetPath, { offset: 0 });
     console.log(`Telegram @${bot.username} đang nhận lệnh. PID=${process.pid}`);
