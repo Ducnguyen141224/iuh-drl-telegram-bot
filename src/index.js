@@ -65,8 +65,8 @@ async function main() {
         const signature = await authSignature();
         if (!signature || signature === blockedSignature) {
           const error = new Error(signature
-            ? "Phiên IUH hết hạn. Mở Đăng nhập IUH.cmd trên máy để đăng nhập lại."
-            : "Chưa có phiên IUH. Mở Đăng nhập IUH.cmd trên máy và đăng nhập một lần.");
+            ? "Phiên IUH hết hạn. Gửi /dangnhap trên Telegram để mở Chrome và đăng nhập lại."
+            : "Chưa có phiên IUH. Gửi /dangnhap trên Telegram để mở Chrome và đăng nhập một lần.");
           error.code = "AUTH_REQUIRED";
           throw error;
         }
@@ -100,8 +100,8 @@ async function main() {
         const authRequired = error.code === "AUTH_REQUIRED";
         if (authRequired) {
           error.message = (await authSignature())
-            ? "Phiên IUH hết hạn. Mở Đăng nhập IUH.cmd trên máy để đăng nhập lại."
-            : "Chưa có phiên IUH. Mở Đăng nhập IUH.cmd trên máy và đăng nhập một lần.";
+            ? "Phiên IUH hết hạn. Gửi /dangnhap trên Telegram để mở Chrome và đăng nhập lại."
+            : "Chưa có phiên IUH. Gửi /dangnhap trên Telegram để mở Chrome và đăng nhập một lần.";
         }
         state = await loadState();
         state.lastError = `${error.code || error.name}:${error.message}`;

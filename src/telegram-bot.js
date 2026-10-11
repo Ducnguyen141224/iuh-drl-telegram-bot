@@ -1,5 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { createTelegramClient } from "./telegram-api.js";
 
@@ -7,6 +9,8 @@ const telegram = createTelegramClient(config.telegramBotToken);
 const runtimeDir = path.dirname(config.eventStatePath);
 const offsetPath = path.join(runtimeDir, "telegram-offset.json");
 const lockPath = path.join(runtimeDir, "telegram-bot.lock");
+const projectDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+let loginProcess = null;
 
 async function readJson(file, fallback) {
   try {
@@ -25,6 +29,36 @@ function formatTime(value) {
   return new Date(value).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 }
 
+async function sendText(text) {
+  await telegram("sendMessage", { chat_id: config.telegramChatId, text });
+}
+
+function triggerLogin() {
+  if (loginProcess && loginProcess.exitCode == null) {
+    return "🟡 Cửa sổ đăng nhập IUH đang mở trên máy. Hãy hoàn tất đăng nhập và CAPTCHA trong Chrome.";
+  }
+
+  const child = spawn(process.execPath, [path.join(projectDir, "src", "login.js"), "--wait"], {
+    cwd: projectDir,
+    windowsHide: true,
+    stdio: ["ignore", "ignore", "ignore"],
+  });
+  loginProcess = child;
+  child.once("error", (error) => {
+    if (loginProcess === child) loginProcess = null;
+    sendText(`❌ Không thể mở cửa sổ đăng nhập IUH: ${error.message}`).catch(console.error);
+  });
+  child.once("exit", (code) => {
+    if (loginProcess === child) loginProcess = null;
+    sendText(code === 0
+      ? "✅ Đã lưu phiên đăng nhập IUH mới. Bộ theo dõi sẽ tự tiếp tục, không cần khởi động lại."
+      : "❌ Chưa lưu được phiên IUH. Gửi /dangnhap để thử lại và hoàn tất đăng nhập trong vòng 15 phút.")
+      .catch(console.error);
+  });
+
+  return "🔐 Đã mở Chrome trên máy đang chạy bot. Hãy đăng nhập IUH và nhập CAPTCHA; bot sẽ nhắn lại khi lưu phiên xong.";
+}
+
 async function replyFor(text) {
   const command = text.trim().split(/\s/u)[0].split("@")[0].toLowerCase();
   if (command === "/start" || command === "/help") {
@@ -34,20 +68,21 @@ async function replyFor(text) {
       "",
       hasSession
         ? "Đã có phiên IUH cục bộ. Dùng /status để xem lần kiểm tra hoạt động gần nhất."
-        : "Chưa có phiên IUH. Mở Đăng nhập IUH.cmd trên máy tính và đăng nhập một lần. Bộ theo dõi local sẽ tự dùng phiên mới.",
+        : "Chưa có phiên IUH. Gửi /dangnhap để mở Chrome trên máy và đăng nhập một lần. Bộ theo dõi local sẽ tự dùng phiên mới.",
       "",
       "/status — Tình trạng theo dõi",
       "/events — Danh sách hoạt động lấy gần nhất",
+      "/dangnhap — Mở Chrome để đăng nhập lại IUH",
       "/help — Hướng dẫn",
     ].join("\n");
   }
   if (command === "/status") {
     const state = await readJson(config.eventStatePath, null);
     if (!(await sessionExists())) {
-      return "🟡 Telegram đang hoạt động.\nMở Đăng nhập IUH.cmd trên máy tính và đăng nhập một lần. Bot sẽ tự tiếp tục theo dõi.";
+      return "🟡 Telegram đang hoạt động.\nGửi /dangnhap để mở Chrome trên máy và đăng nhập một lần. Bot sẽ tự tiếp tục theo dõi.";
     }
     if (state?.authStatus === "required") {
-      return "🟡 Phiên IUH đã hết hạn.\nMở Đăng nhập IUH.cmd trên máy tính để đăng nhập lại. Bot sẽ tự dùng phiên mới; không cần khởi động lại.";
+      return "🟡 Phiên IUH đã hết hạn.\nGửi /dangnhap để mở Chrome trên máy và đăng nhập lại. Bot sẽ tự dùng phiên mới; không cần khởi động lại.";
     }
     if (!state?.checkedAt) {
       return "🟡 Đã có file phiên IUH, chưa có lần thu thập thành công được ghi nhận. Chạy npm start trên máy tính.";
@@ -76,7 +111,10 @@ async function replyFor(text) {
       config.url,
     ].filter(Boolean).join("\n\n").slice(0, 4000);
   }
-  return "Gửi /status để kiểm tra bot, /events để xem hoạt động hoặc /help để xem hướng dẫn.";
+  if (command === "/dangnhap" || command === "/login") {
+    return triggerLogin();
+  }
+  return "Gửi /status để kiểm tra bot, /events để xem hoạt động, /dangnhap để đăng nhập IUH hoặc /help để xem hướng dẫn.";
 }
 
 async function acquireLock() {
@@ -109,6 +147,14 @@ async function main() {
     const webhook = await telegram("getWebhookInfo");
     if (webhook.url) throw new Error("Bot có webhook; không thể chạy bộ nhận lệnh bằng getUpdates.");
     const bot = await telegram("getMe");
+    await telegram("setMyCommands", {
+      commands: [
+        { command: "status", description: "Kiểm tra trạng thái theo dõi" },
+        { command: "events", description: "Xem hoạt động gần nhất" },
+        { command: "dangnhap", description: "Mở Chrome đăng nhập lại IUH" },
+        { command: "help", description: "Xem hướng dẫn sử dụng" },
+      ],
+    });
     let { offset } = await readJson(offsetPath, { offset: 0 });
     console.log(`Telegram @${bot.username} đang nhận lệnh. PID=${process.pid}`);
     let stopping = false;

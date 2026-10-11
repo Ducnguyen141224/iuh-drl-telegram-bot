@@ -25,7 +25,8 @@ Máy cần có Internet. Nếu máy không có WinGet, cài [Node.js LTS](https:
 
 - **Bật bot.cmd**: bật chạy nền và tự khởi động Windows.
 - **Tắt bot.cmd**: dừng bot và tắt tự khởi động; giữ dữ liệu.
-- **Đăng nhập IUH.cmd**: dùng khi Telegram báo hết phiên. Bot tự nhận phiên mới.
+- Telegram `/dangnhap`: mở Chrome trên máy đang chạy bot để đăng nhập lại và nhập CAPTCHA; bot tự nhắn kết quả khi lưu phiên xong.
+- **Đăng nhập IUH.cmd**: cách dự phòng nếu bạn không muốn kích hoạt đăng nhập từ Telegram.
 - Telegram `/status`: tình trạng phiên, lần kiểm tra gần nhất và chu kỳ 60 giây.
 - Telegram `/events`: danh sách lấy gần nhất, kèm thời điểm lấy.
 

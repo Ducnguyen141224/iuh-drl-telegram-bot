@@ -25,6 +25,7 @@ foreach ($relativeFile in $relativeFiles) {
     if ($contents -match '\d{6,}:[A-Za-z0-9_-]{25,}') { throw "Possible Telegram token detected in $relativeFile. Packaging stopped." }
 }
 
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Directory]::CreateDirectory((Split-Path -Parent $OutputPath)) | Out-Null
 $archive = [IO.Compression.ZipFile]::Open($OutputPath, [IO.Compression.ZipArchiveMode]::Create)
