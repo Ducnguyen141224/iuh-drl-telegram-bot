@@ -24,7 +24,7 @@ Trình cài đặt kiểm tra hoặc cài Node.js LTS và Chrome bằng WinGet, 
 
 ## Chạy local tự động trên Windows
 
-Mở **Bật bot.cmd** để cài tác vụ `IUH-DRL-Local` và chạy nền ngay. Bot tự khởi động lại mỗi khi bạn đăng nhập Windows, chạy cùng quyền người dùng hiện tại. Bộ quản lý chạy cả phần trả lời Telegram và phần kiểm tra IUH; tự khởi động lại tiến trình con nếu bị dừng do lỗi. Máy cần hoạt động và có mạng; khi tắt máy hoặc sleep thì không kiểm tra được.
+Mở **Bật bot.cmd** để cài tác vụ `IUH-DRL-Local` và chạy nền ngay. Bot tự khởi động lại mỗi khi bạn đăng nhập Windows, chạy cùng quyền người dùng hiện tại và không giữ cửa sổ PowerShell/Terminal trên màn hình. Bộ quản lý chạy cả phần trả lời Telegram và phần kiểm tra IUH; tự khởi động lại tiến trình con nếu bị dừng do lỗi. Máy cần hoạt động và có mạng; khi tắt máy hoặc sleep thì không kiểm tra được.
 
 Khi phiên hết hạn, bot gửi cảnh báo yêu cầu dùng `/dangnhap`. Lệnh này chỉ được chấp nhận từ Chat ID đã cấu hình và sẽ mở Chrome trên chính máy đang chạy bot. Bạn đăng nhập, nhập CAPTCHA; bot tự lưu phiên, nhắn kết quả và tiếp tục theo dõi mà không cần khởi động lại. **Đăng nhập IUH.cmd** là phương án dự phòng thực hiện cùng quy trình trực tiếp trên máy.
 

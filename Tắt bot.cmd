@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
 powershell.exe -NoProfile -File scripts\stop-local.ps1
-pause
+if errorlevel 1 pause

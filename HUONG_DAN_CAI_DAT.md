@@ -17,7 +17,7 @@
 - Tạo `.env` nếu chưa có, giữ token đã nhập, đặt chu kỳ 60 giây và đường dẫn Chrome trên máy mới.
 - Kiểm tra token, lưu chat ID và gửi một tin thử Telegram.
 - Mở Chrome để lưu phiên IUH, rồi tạo mốc danh sách hiện tại. Không gửi hàng loạt sự kiện cũ.
-- Cài tác vụ `IUH-DRL-Local`, chạy nền ngay và tự chạy khi bạn đăng nhập Windows.
+- Cài tác vụ `IUH-DRL-Local`, chạy ẩn không mở PowerShell/Terminal và tự chạy khi bạn đăng nhập Windows.
 
 Máy cần có Internet. Nếu máy không có WinGet, cài [Node.js LTS](https://nodejs.org/) và [Google Chrome](https://www.google.com/chrome/) thủ công, rồi mở lại BAT. BAT sẽ báo bước lỗi và có thể chạy lại; không xóa `.env` hay lịch sử khi chạy lại.
 

@@ -2,12 +2,10 @@ $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $PSScriptRoot
 $taskName = 'IUH-DRL-Local'
 $nodePath = (Get-Command node.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
-$shellPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-$rootQuoted = $projectDirectory.Replace("'", "''")
-$nodeQuoted = $nodePath.Replace("'", "''")
-$serviceQuoted = (Join-Path $projectDirectory 'src\local-service.js').Replace("'", "''")
-$commandText = "& { Set-Location -LiteralPath '$rootQuoted'; & '$nodeQuoted' '$serviceQuoted'" + '; exit $LASTEXITCODE }'
-$actionArgs = '-NoProfile -NonInteractive -WindowStyle Hidden -Command "' + $commandText + '"'
+$launcherPath = Join-Path $PSScriptRoot 'run-local-hidden.vbs'
+$wscriptPath = Join-Path $env:SystemRoot 'System32\wscript.exe'
+if (-not (Test-Path -LiteralPath $launcherPath)) { throw 'Missing hidden launcher: scripts\run-local-hidden.vbs' }
+$actionArgs = '//B //Nologo "' + $launcherPath + '" "' + $nodePath + '"'
 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
@@ -16,7 +14,7 @@ if ($existing) {
     if (-not $ownedAction) { throw 'A task with this name exists for a different project. No changes made.' }
 }
 
-$action = New-ScheduledTaskAction -Execute $shellPath -Argument $actionArgs -WorkingDirectory $projectDirectory
+$action = New-ScheduledTaskAction -Execute $wscriptPath -Argument $actionArgs -WorkingDirectory $projectDirectory
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $currentUser
 $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -Hidden -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
