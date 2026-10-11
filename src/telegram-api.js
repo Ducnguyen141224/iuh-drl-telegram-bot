@@ -19,6 +19,8 @@ export function createTelegramClient(token) {
         `Telegram ${method} thất bại (HTTP ${response.status}, mã ${result?.error_code || "không rõ"}).`,
       );
       error.retryAfter = result?.parameters?.retry_after;
+      error.httpStatus = response.status;
+      error.errorCode = result?.error_code;
       throw error;
     }
     return result.result;

@@ -10,6 +10,7 @@ Bot chạy local trên Windows, mở trang **Tra cứu** IUH bằng Chrome và g
 - Lưu phiên IUH cục bộ, tự cập nhật cookie sau mỗi lần kiểm tra thành công.
 - Khi phiên hết hạn, gửi cảnh báo một lần; sau khi phiên phục hồi, một lần hết hạn mới sẽ được cảnh báo lại.
 - Hỗ trợ `/dangnhap` để mở Chrome trên máy chạy bot, nhập CAPTCHA và tự lưu phiên mới.
+- Hỗ trợ nhiều người đăng ký nhận tin; quyền đăng nhập IUH và quản lý chỉ dành cho chủ bot.
 
 Máy chạy bot phải đang bật, có mạng và đã đăng nhập Windows. IUH sử dụng CAPTCHA nên bot không thể đăng nhập hoàn toàn tự động hoặc bảo đảm phiên tồn tại vĩnh viễn.
 
@@ -26,16 +27,21 @@ Trình cài đặt kiểm tra hoặc cài Node.js LTS và Chrome bằng WinGet, 
 
 Mở **Bật bot.cmd** để cài tác vụ `IUH-DRL-Local` và chạy nền ngay. Bot tự khởi động lại mỗi khi bạn đăng nhập Windows, chạy cùng quyền người dùng hiện tại và không giữ cửa sổ PowerShell/Terminal trên màn hình. Bộ quản lý chạy cả phần trả lời Telegram và phần kiểm tra IUH; tự khởi động lại tiến trình con nếu bị dừng do lỗi. Máy cần hoạt động và có mạng; khi tắt máy hoặc sleep thì không kiểm tra được.
 
-Khi phiên hết hạn, bot gửi cảnh báo yêu cầu dùng `/dangnhap`. Lệnh này chỉ được chấp nhận từ Chat ID đã cấu hình và sẽ mở Chrome trên chính máy đang chạy bot. Bạn đăng nhập, nhập CAPTCHA; bot tự lưu phiên, nhắn kết quả và tiếp tục theo dõi mà không cần khởi động lại. **Đăng nhập IUH.cmd** là phương án dự phòng thực hiện cùng quy trình trực tiếp trên máy.
+`TELEGRAM_CHAT_ID` là tài khoản **chủ bot**. Khi phiên hết hạn, cảnh báo và quyền `/dangnhap` chỉ gửi/cấp cho tài khoản này. Lệnh mở Chrome trên chính máy đang chạy bot; chủ bot nhập CAPTCHA, bot tự lưu phiên và tiếp tục theo dõi. **Đăng nhập IUH.cmd** là phương án dự phòng.
+
+Người dùng khác mở bot và gửi `/start` để đăng ký. Chat ID của họ được lưu cục bộ trong `data/subscribers.json`; khi có sự kiện mới, bot gửi cho chủ bot và toàn bộ người đăng ký. Người dùng gửi `/stop` để hủy nhận tin. Nếu một tài khoản chặn bot hoặc chat không còn hợp lệ, tài khoản đó được tự loại khỏi danh sách.
 
 Mở **Tắt bot.cmd** để dừng bot và tắt tự khởi động cùng Windows. Dữ liệu phiên và lịch sử được giữ nguyên. Mở Bật bot.cmd để bật lại.
 
 Các lệnh Telegram:
 
-- `/start` hoặc `/help`: hướng dẫn nhanh.
+- `/start`: đăng ký nhận thông báo.
 - `/status`: trạng thái phiên và lần kiểm tra gần nhất.
 - `/events`: tối đa 10 hoạt động trong lần lấy dữ liệu gần nhất.
-- `/dangnhap`: mở Chrome để đăng nhập hoặc làm mới phiên IUH.
+- `/stop`: hủy nhận thông báo.
+- `/help`: hướng dẫn nhanh.
+- `/dangnhap`: chỉ chủ bot; mở Chrome để đăng nhập hoặc làm mới phiên IUH.
+- `/subscribers`: chỉ chủ bot; xem số người đăng ký.
 
 Nhấn nút **Menu** hoặc nhập dấu `/` trong ô chat để Telegram hiển thị danh sách lệnh trên. Bot tự đăng ký lại menu này mỗi lần khởi động.
 
@@ -92,4 +98,4 @@ Sau khi điền `TELEGRAM_BOT_TOKEN` vào `.env`:
 3. Chạy `npm run telegram:test` để gửi tin thử.
 4. Chạy `npm run local` để bật cả bộ nhận lệnh Telegram và bộ theo dõi IUH trong cùng một tiến trình quản lý.
 
-Không chia sẻ `.env`, token Telegram, Discord webhook hay thư mục `.auth/`. Các đường dẫn này cùng với `data/`, `node_modules/` và `dist/` đã được bỏ khỏi Git.
+Không chia sẻ `.env`, token Telegram, Discord webhook hay thư mục `.auth/`. Danh sách thuê bao trong `data/` cũng là dữ liệu riêng tư. Các đường dẫn này cùng với `node_modules/` và `dist/` đã được bỏ khỏi Git.

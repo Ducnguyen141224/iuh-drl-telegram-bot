@@ -1,4 +1,5 @@
 import { createTelegramClient } from "./telegram-api.js";
+import { notificationChatIds, unsubscribe } from "./subscribers.js";
 
 function truncate(text, maxLength) {
   if (text.length <= maxLength) return text;
@@ -28,26 +29,34 @@ export function createNotifier(config) {
   return {
     hasRemoteChannel: hasTelegram || hasDiscord,
 
-    async send(message) {
+    async send(message, options = {}) {
       console.log(`\n${message}\n`);
       const jobs = [];
+      const delivered = new Set(options.deliveredTo || []);
 
       if (hasTelegram) {
-        jobs.push(
-          telegram(
-            "sendMessage",
-            {
-              chat_id: config.telegramChatId,
+        const chatIds = options.audience === "admin"
+          ? [String(config.telegramChatId)]
+          : await notificationChatIds(config.subscriberStatePath, config.telegramChatId);
+        for (const chatId of chatIds) {
+          const key = `telegram:${chatId}`;
+          if (delivered.has(key)) continue;
+          jobs.push({
+            key,
+            chatId,
+            promise: telegram("sendMessage", {
+              chat_id: chatId,
               text: truncate(message, 4096),
               disable_web_page_preview: true,
-            },
-          ),
-        );
+            }),
+          });
+        }
       }
 
-      if (hasDiscord) {
-        jobs.push(
-          postJson(
+      if (hasDiscord && !delivered.has("discord")) {
+        jobs.push({
+          key: "discord",
+          promise: postJson(
             config.discordWebhookUrl,
             {
               content: truncate(message, 2000),
@@ -55,17 +64,36 @@ export function createNotifier(config) {
             },
             "Discord",
           ),
-        );
+        });
       }
 
-      const results = await Promise.allSettled(jobs);
-      const failures = results.filter((result) => result.status === "rejected");
-      if (failures.length) {
-        throw new AggregateError(
-          failures.map((failure) => failure.reason),
-          `Không gửi được thông báo: ${failures.map((failure) => failure.reason.message).join("; ")}`,
-        );
+      const results = await Promise.allSettled(jobs.map((job) => job.promise));
+      const failures = [];
+      for (let index = 0; index < results.length; index += 1) {
+        const result = results[index];
+        const job = jobs[index];
+        if (result.status === "fulfilled") {
+          delivered.add(job.key);
+          continue;
+        }
+        const isDeadSubscriber = job.chatId && job.chatId !== String(config.telegramChatId) &&
+          [400, 403].includes(result.reason?.errorCode);
+        if (isDeadSubscriber) {
+          await unsubscribe(config.subscriberStatePath, job.chatId);
+          continue;
+        }
+        failures.push(result.reason);
       }
+      if (failures.length) {
+        const error = new AggregateError(failures, `Không gửi được thông báo: ${failures.map((failure) => failure.message).join("; ")}`);
+        error.deliveredTo = [...delivered];
+        throw error;
+      }
+      return { deliveredTo: [...delivered] };
+    },
+
+    async sendAdmin(message) {
+      return this.send(message, { audience: "admin" });
     },
   };
 }

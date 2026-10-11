@@ -29,6 +29,7 @@ Máy cần có Internet. Nếu máy không có WinGet, cài [Node.js LTS](https:
 - **Đăng nhập IUH.cmd**: cách dự phòng nếu bạn không muốn kích hoạt đăng nhập từ Telegram.
 - Telegram `/status`: tình trạng phiên, lần kiểm tra gần nhất và chu kỳ 60 giây.
 - Telegram `/events`: danh sách lấy gần nhất, kèm thời điểm lấy.
+- Người dùng khác gửi `/start` để đăng ký nhận sự kiện và `/stop` để hủy. Chỉ chủ bot có `/dangnhap` và `/subscribers`.
 
 Máy tắt, sleep hoặc mất mạng sẽ tạm dừng việc kiểm tra. Phiên IUH có thể hết hạn theo chính sách của trường; khi cần đăng nhập/CAPTCHA lại, bot sẽ thông báo.
 

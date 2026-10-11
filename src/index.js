@@ -28,8 +28,12 @@ async function drainNotifications(state) {
   while (state.pendingNotifications?.length) {
     const notice = state.pendingNotifications[0];
     try {
-      await notifier.send(formatNotification(notice, config.url));
+      const result = await notifier.send(formatNotification(notice, config.url), {
+        deliveredTo: notice.deliveredTo || [],
+      });
+      notice.deliveredTo = result.deliveredTo;
     } catch (error) {
+      notice.deliveredTo = [...new Set([...(notice.deliveredTo || []), ...(error.deliveredTo || [])])];
       state.lastNotificationError = error.message;
       await saveState(state);
       console.error(error.message);
@@ -91,7 +95,7 @@ async function main() {
         await saveState(state); // Persist the outbox before sending messages.
         await drainNotifications(state);
         if (recovered) {
-          await notifier.send("✅ Phiên IUH đã hoạt động trở lại. Bot tiếp tục theo dõi hoạt động.").catch(() => {});
+          await notifier.sendAdmin("✅ Phiên IUH đã hoạt động trở lại. Bot tiếp tục theo dõi hoạt động.").catch(() => {});
         }
         failures = 0;
         blockedSignature = null;
@@ -111,7 +115,7 @@ async function main() {
         await saveState(state);
         if (state.lastAlertedError !== state.lastError) {
           try {
-            await notifier.send(`⚠️ Bot IUH cần chú ý\n\n${error.message}`);
+            await notifier.sendAdmin(`⚠️ Bot IUH cần chú ý\n\n${error.message}`);
             state.lastAlertedError = state.lastError;
             await saveState(state);
           } catch (notifyError) { console.error(notifyError.message); }

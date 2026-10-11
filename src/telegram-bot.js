@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { createTelegramClient } from "./telegram-api.js";
+import { isSubscribed, readSubscribers, subscribe, unsubscribe } from "./subscribers.js";
 
 const telegram = createTelegramClient(config.telegramBotToken);
 const runtimeDir = path.dirname(config.eventStatePath);
@@ -29,8 +30,8 @@ function formatTime(value) {
   return new Date(value).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 }
 
-async function sendText(text) {
-  await telegram("sendMessage", { chat_id: config.telegramChatId, text });
+async function sendText(chatId, text) {
+  await telegram("sendMessage", { chat_id: chatId, text });
 }
 
 function triggerLogin() {
@@ -46,11 +47,11 @@ function triggerLogin() {
   loginProcess = child;
   child.once("error", (error) => {
     if (loginProcess === child) loginProcess = null;
-    sendText(`❌ Không thể mở cửa sổ đăng nhập IUH: ${error.message}`).catch(console.error);
+    sendText(config.telegramChatId, `❌ Không thể mở cửa sổ đăng nhập IUH: ${error.message}`).catch(console.error);
   });
   child.once("exit", (code) => {
     if (loginProcess === child) loginProcess = null;
-    sendText(code === 0
+    sendText(config.telegramChatId, code === 0
       ? "✅ Đã lưu phiên đăng nhập IUH mới. Bộ theo dõi sẽ tự tiếp tục, không cần khởi động lại."
       : "❌ Chưa lưu được phiên IUH. Gửi /dangnhap để thử lại và hoàn tất đăng nhập trong vòng 15 phút.")
       .catch(console.error);
@@ -59,30 +60,72 @@ function triggerLogin() {
   return "🔐 Đã mở Chrome trên máy đang chạy bot. Hãy đăng nhập IUH và nhập CAPTCHA; bot sẽ nhắn lại khi lưu phiên xong.";
 }
 
-async function replyFor(text) {
+function publicHelp() {
+  return [
+    "/start — Đăng ký nhận thông báo",
+    "/status — Tình trạng theo dõi",
+    "/events — Danh sách hoạt động gần nhất",
+    "/stop — Hủy nhận thông báo",
+    "/help — Hướng dẫn",
+  ].join("\n");
+}
+
+async function replyFor(message) {
+  const { text, chat, from = {} } = message;
   const command = text.trim().split(/\s/u)[0].split("@")[0].toLowerCase();
-  if (command === "/start" || command === "/help") {
+  const chatId = String(chat.id);
+  const isAdmin = chatId === String(config.telegramChatId);
+
+  if (command === "/start") {
+    await subscribe(config.subscriberStatePath, {
+      chatId,
+      username: from.username,
+      firstName: from.first_name,
+      lastName: from.last_name,
+    });
     const hasSession = await sessionExists();
     return [
-      "✅ Bot điểm rèn luyện IUH đã kết nối với bạn.",
+      "✅ Bạn đã đăng ký nhận thông báo hoạt động điểm rèn luyện IUH.",
       "",
-      hasSession
+      isAdmin && !hasSession
+        ? "Chưa có phiên IUH. Dùng /dangnhap để mở Chrome trên máy chủ và đăng nhập một lần."
+        : hasSession
         ? "Đã có phiên IUH cục bộ. Dùng /status để xem lần kiểm tra hoạt động gần nhất."
-        : "Chưa có phiên IUH. Gửi /dangnhap để mở Chrome trên máy và đăng nhập một lần. Bộ theo dõi local sẽ tự dùng phiên mới.",
+        : "Chủ bot đang cần đăng nhập IUH. Bạn vẫn được lưu trong danh sách nhận thông báo.",
       "",
-      "/status — Tình trạng theo dõi",
-      "/events — Danh sách hoạt động lấy gần nhất",
-      "/dangnhap — Mở Chrome để đăng nhập lại IUH",
-      "/help — Hướng dẫn",
+      publicHelp(),
+      isAdmin ? "/dangnhap — Mở Chrome đăng nhập IUH\n/subscribers — Xem người đăng ký" : "",
     ].join("\n");
+  }
+  if (command === "/help") {
+    return [
+      "🤖 Bot thông báo hoạt động điểm rèn luyện IUH",
+      "",
+      publicHelp(),
+      isAdmin ? "/dangnhap — Mở Chrome đăng nhập IUH\n/subscribers — Xem người đăng ký" : "",
+    ].filter(Boolean).join("\n");
+  }
+  if (command === "/stop") {
+    if (isAdmin) return "🛡️ Tài khoản chủ bot luôn nhận cảnh báo quản trị và sự kiện. Không thể hủy bằng /stop.";
+    const removed = await unsubscribe(config.subscriberStatePath, chatId);
+    return removed
+      ? "🔕 Bạn đã hủy nhận thông báo. Gửi /start bất cứ lúc nào để đăng ký lại."
+      : "Bạn chưa đăng ký nhận thông báo. Gửi /start để đăng ký.";
+  }
+  if (!isAdmin && !(await isSubscribed(config.subscriberStatePath, chatId))) {
+    return "Bạn chưa đăng ký. Hãy gửi /start để bắt đầu nhận thông báo.";
   }
   if (command === "/status") {
     const state = await readJson(config.eventStatePath, null);
     if (!(await sessionExists())) {
-      return "🟡 Telegram đang hoạt động.\nGửi /dangnhap để mở Chrome trên máy và đăng nhập một lần. Bot sẽ tự tiếp tục theo dõi.";
+      return isAdmin
+        ? "🟡 Telegram đang hoạt động.\nGửi /dangnhap để mở Chrome trên máy và đăng nhập một lần. Bot sẽ tự tiếp tục theo dõi."
+        : "🟡 Bot đang chờ chủ bot đăng nhập IUH.";
     }
     if (state?.authStatus === "required") {
-      return "🟡 Phiên IUH đã hết hạn.\nGửi /dangnhap để mở Chrome trên máy và đăng nhập lại. Bot sẽ tự dùng phiên mới; không cần khởi động lại.";
+      return isAdmin
+        ? "🟡 Phiên IUH đã hết hạn.\nGửi /dangnhap để mở Chrome trên máy và đăng nhập lại. Bot sẽ tự dùng phiên mới; không cần khởi động lại."
+        : "🟡 Phiên IUH đã hết hạn. Chủ bot đã được thông báo để đăng nhập lại.";
     }
     if (!state?.checkedAt) {
       return "🟡 Đã có file phiên IUH, chưa có lần thu thập thành công được ghi nhận. Chạy npm start trên máy tính.";
@@ -112,9 +155,24 @@ async function replyFor(text) {
     ].filter(Boolean).join("\n\n").slice(0, 4000);
   }
   if (command === "/dangnhap" || command === "/login") {
+    if (!isAdmin) return "⛔ Lệnh /dangnhap chỉ dành cho chủ bot.";
     return triggerLogin();
   }
-  return "Gửi /status để kiểm tra bot, /events để xem hoạt động, /dangnhap để đăng nhập IUH hoặc /help để xem hướng dẫn.";
+  if (command === "/subscribers") {
+    if (!isAdmin) return "⛔ Lệnh này chỉ dành cho chủ bot.";
+    const subscribers = await readSubscribers(config.subscriberStatePath);
+    const members = subscribers.filter((item) => item.chatId !== String(config.telegramChatId));
+    return [
+      `👥 Người đăng ký: ${members.length}`,
+      `Tổng người nhận kể cả chủ bot: ${members.length + 1}`,
+      ...members.slice(-20).map((item, index) => {
+        const name = [item.firstName, item.lastName].filter(Boolean).join(" ") || "Không có tên";
+        return `${index + 1}. ${name}${item.username ? ` (@${item.username})` : ""}`;
+      }),
+      members.length > 20 ? `Đang hiển thị 20/${members.length} người gần nhất.` : "",
+    ].filter(Boolean).join("\n");
+  }
+  return `Lệnh chưa được hỗ trợ.\n\n${publicHelp()}`;
 }
 
 async function acquireLock() {
@@ -149,15 +207,25 @@ async function main() {
     const bot = await telegram("getMe");
     await telegram("setMyCommands", {
       commands: [
-        { command: "start", description: "Khởi động và xem hướng dẫn nhanh" },
+        { command: "start", description: "Đăng ký nhận thông báo" },
+        { command: "status", description: "Kiểm tra trạng thái theo dõi" },
+        { command: "events", description: "Xem hoạt động gần nhất" },
+        { command: "stop", description: "Hủy nhận thông báo" },
+        { command: "help", description: "Xem hướng dẫn sử dụng" },
+      ],
+    });
+    await telegram("setMyCommands", {
+      scope: { type: "chat", chat_id: config.telegramChatId },
+      commands: [
+        { command: "start", description: "Đăng ký và xem hướng dẫn" },
         { command: "status", description: "Kiểm tra trạng thái theo dõi" },
         { command: "events", description: "Xem hoạt động gần nhất" },
         { command: "dangnhap", description: "Mở Chrome đăng nhập lại IUH" },
+        { command: "subscribers", description: "Xem số người đăng ký" },
         { command: "help", description: "Xem hướng dẫn sử dụng" },
       ],
     });
     await telegram("setChatMenuButton", {
-      chat_id: config.telegramChatId,
       menu_button: { type: "commands" },
     });
     let { offset } = await readJson(offsetPath, { offset: 0 });
@@ -170,10 +238,10 @@ async function main() {
         const updates = await telegram("getUpdates", { offset, timeout: 25, limit: 100 });
         for (const update of updates) {
           const message = update.message;
-          if (message?.chat?.type === "private" && String(message.chat.id) === config.telegramChatId && message.text) {
+          if (message?.chat?.type === "private" && message.text) {
             await telegram("sendMessage", {
-              chat_id: config.telegramChatId,
-              text: await replyFor(message.text),
+              chat_id: message.chat.id,
+              text: await replyFor(message),
             });
             console.log(`Đã trả lời lệnh Telegram (update ${update.update_id}).`);
           }

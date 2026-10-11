@@ -22,6 +22,9 @@ export const config = {
   eventStatePath: path.resolve(
     process.env.EVENT_STATE_FILE || "data/events-state.json",
   ),
+  subscriberStatePath: path.resolve(
+    process.env.TELEGRAM_SUBSCRIBERS_FILE || "data/subscribers.json",
+  ),
   executablePath: process.env.CHROME_EXECUTABLE_PATH || "",
   pollIntervalMs: Math.max(60, numberEnv("POLL_INTERVAL_SECONDS", 60)) * 1000,
   headless: boolEnv("HEADLESS", true),
