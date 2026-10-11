@@ -1,0 +1,24 @@
+{
+  "name": "iuh-training-event-watcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Theo dõi hoạt động điểm rèn luyện IUH và gửi thông báo khi có hoạt động mới.",
+  "type": "module",
+  "scripts": {
+    "telegram:setup": "node src/setup-telegram.js",
+    "telegram:test": "node src/setup-telegram.js --send-test",
+    "bot": "node src/telegram-bot.js",
+    "local": "node src/local-service.js",
+    "login": "node src/login.js",
+    "start": "node src/index.js",
+    "check": "node src/index.js --once",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "playwright-core": "^1.55.1"
+  }
+}

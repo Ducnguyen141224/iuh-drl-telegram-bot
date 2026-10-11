@@ -1,0 +1,28 @@
+{
+  "checkedOn": "2026-10-11",
+  "timezone": "Asia/Saigon",
+  "tool": "Firecrawl scrape",
+  "requestedUrl": "https://doantn.iuh.edu.vn/doanvien.html@211@Tra-cuu",
+  "fetchOptions": {
+    "maxAge": 0,
+    "storeInCache": false,
+    "formats": ["markdown", "html"],
+    "authenticationProvided": false
+  },
+  "result": {
+    "finalUrl": "https://doantn.iuh.edu.vn/login.html",
+    "title": "Đăng nhập",
+    "statusCode": 200,
+    "scrapeId": "01a12983-eb13-738e-843f-1ad4c4673cc7",
+    "activityTableRetrieved": false,
+    "loginFields": ["mssv", "password", "security_code"],
+    "captchaPresent": true
+  },
+  "interpretation": "A successful HTTP response contains the login page, not activity records. A valid authenticated session is required. Firecrawl does not automatically share the user's Chrome session.",
+  "priorBrowserEvidence": {
+    "source": "Computer Use inspection earlier in this conversation; not a fresh authenticated Firecrawl scrape",
+    "tableSelector": "table.tblDoanvien",
+    "eventIdPattern": "a[data-target='#myModal_<id>']",
+    "columns": ["ordinal", "activity and capacity", "semester", "points", "registration deadline", "registration status"]
+  }
+}
